@@ -1,4 +1,3 @@
-// REQUIRED FOR MOBILE PDF
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -11,8 +10,7 @@ let voicesReady = false;
 let utterance = null;
 let words = [];
 
-/* -------- VOICES (MOBILE SAFE) -------- */
-
+/* ---------- VOICES ---------- */
 speechSynthesis.onvoiceschanged = () => {
   voices = speechSynthesis.getVoices();
   if (voices.length) {
@@ -26,8 +24,7 @@ readBtn.addEventListener("click", () => {
   startReading(0);
 });
 
-/* -------- FILE HANDLING -------- */
-
+/* ---------- FILE ---------- */
 fileInput.addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -44,8 +41,7 @@ fileInput.addEventListener("change", async e => {
   else if (file.type.startsWith("image")) loadImage(file);
 });
 
-/* -------- PDF -------- */
-
+/* ---------- PDF ---------- */
 async function loadPDF(file) {
   const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
 
@@ -68,7 +64,6 @@ async function loadPDF(file) {
     content.items.forEach(item => {
       const y = item.transform[5];
       if (y > pageHeight * 0.9 || y < pageHeight * 0.08) return;
-
       if (lastY !== null && Math.abs(y - lastY) > 6) text += "\n";
       text += item.str;
       lastY = y;
@@ -78,8 +73,7 @@ async function loadPDF(file) {
   }
 }
 
-/* -------- OTHER FILES -------- */
-
+/* ---------- OTHER FILES ---------- */
 function loadText(file) {
   const r = new FileReader();
   r.onload = () => viewer.appendChild(createTextBlock(r.result));
@@ -101,8 +95,7 @@ function loadImage(file) {
   viewer.appendChild(img);
 }
 
-/* -------- TEXT BLOCK -------- */
-
+/* ---------- TEXT ---------- */
 function createTextBlock(text) {
   const div = document.createElement("div");
   div.className = "text";
@@ -123,17 +116,13 @@ function createTextBlock(text) {
   return div;
 }
 
-/* -------- TTS -------- */
-
+/* ---------- TTS ---------- */
 function expandCaps(text) {
   return text.replace(/\b[A-Z]{2,}\b/g, w => w.split("").join(" "));
 }
 
 function getVoice() {
-  return (
-    voices.find(v => v.lang === "en-US") ||
-    voices[0]
-  );
+  return voices.find(v => v.lang === "en-US") || voices[0];
 }
 
 function startReading(start = 0) {
@@ -146,14 +135,14 @@ function startReading(start = 0) {
   utterance.voice = getVoice();
   utterance.rate = 0.55;
 
-  let index = start;
+  let i = start;
 
   utterance.onboundary = e => {
-    if (e.name === "word" && words[index]) {
+    if (e.name === "word" && words[i]) {
       words.forEach(w => w.classList.remove("highlight"));
-      words[index].classList.add("highlight");
-      words[index].scrollIntoView({ block: "center" });
-      index++;
+      words[i].classList.add("highlight");
+      words[i].scrollIntoView({ block: "center" });
+      i++;
     }
   };
 

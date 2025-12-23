@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Mobile Reader</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
 
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <!-- Mammoth (DOCX) -->
+  <!-- DOCX -->
   <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
@@ -31,5 +35,12 @@
 <div id="viewer"></div>
 
 <script src="script.js"></script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+</script>
+
 </body>
 </html>
