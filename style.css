@@ -1,0 +1,74 @@
+body {
+  margin: 0;
+  padding: 12px;
+  background: #000;
+  color: #fff;
+  font-family: system-ui, -apple-system, Arial;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.upload {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+#fileInput {
+  font-size: 18px;
+  padding: 14px;
+  width: 90%;
+  background: #111;
+  color: #fff;
+  border: 2px solid #555;
+  border-radius: 10px;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+button {
+  font-size: 18px;
+  padding: 10px 14px;
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 8px;
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+#viewer {
+  background: #111;
+  padding: 10px;
+  border-radius: 8px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+canvas, img {
+  width: 100%;
+  display: block;
+  margin: 12px 0;
+}
+
+.text {
+  padding: 8px 0;
+}
+
+.word {
+  cursor: pointer;
+}
+
+.highlight {
+  background: yellow;
+  color: black;
+}
