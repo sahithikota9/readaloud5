@@ -1,46 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mobile Reader</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Mobile PDF & Image Text to Speech</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#000000">
+  <link rel="stylesheet" href="styles.css" />
 
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <!-- DOCX -->
-  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
-
-  <link rel="stylesheet" href="style.css">
+  <!-- Tesseract.js (OCR) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
-<h1>Mobile Reader</h1>
+<header>
+  <h1>Read Aloud</h1>
+  <p>Upload a PDF or image. Tap any word to start reading from there.</p>
+</header>
 
-<div class="upload">
-  <input type="file" id="fileInput" accept=".pdf,.txt,.docx,image/*">
-</div>
+<section class="controls">
+  <input id="fileInput" type="file" accept=".pdf,image/*" />
 
-<div class="controls">
-  <button id="readBtn" disabled>▶ Read</button>
-  <button onclick="pauseReading()">⏸</button>
-  <button onclick="resumeReading()">▶</button>
-  <button onclick="stopReading()">⏹</button>
-</div>
+  <div class="tts-controls">
+    <button id="playBtn">▶ Play</button>
+    <button id="pauseBtn">⏸ Pause</button>
+    <button id="stopBtn">⏹ Stop</button>
 
-<div id="viewer"></div>
+    <select id="rate">
+      <option value="0.75">0.75×</option>
+      <option value="1" selected>1×</option>
+      <option value="1.25">1.25×</option>
+      <option value="1.5">1.5×</option>
+    </select>
+  </div>
+</section>
+
+<main>
+  <div id="pdfContainer" class="pdf-container hidden">
+    <canvas id="pdfCanvas"></canvas>
+
+    <div class="pdf-nav">
+      <button id="prevPage">◀</button>
+      <span id="pageInfo"></span>
+      <button id="nextPage">▶</button>
+    </div>
+  </div>
+
+  <div id="textContainer" class="text-container">
+    <p class="hint">
+      Extracted text will appear here. Tap any word to start reading from that word.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <small>Optimized for mobile browsers</small>
+</footer>
 
 <script src="script.js"></script>
-
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
-  }
-</script>
-
 </body>
 </html>

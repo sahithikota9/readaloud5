@@ -1,158 +1,142 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
-const fileInput = document.getElementById("fileInput");
-const viewer = document.getElementById("viewer");
-const readBtn = document.getElementById("readBtn");
-
-let voices = [];
-let voicesReady = false;
 let utterance = null;
 let words = [];
+let currentWordIndex = 0;
 
-/* ---------- VOICES ---------- */
-speechSynthesis.onvoiceschanged = () => {
-  voices = speechSynthesis.getVoices();
-  if (voices.length) {
-    voicesReady = true;
-    readBtn.disabled = false;
+// ---------- Speech ----------
+function speakFrom(index) {
+  if (!words.length) return;
+
+  stopSpeech();
+  currentWordIndex = index;
+
+  const text = words.slice(index).join(" ");
+  utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = parseFloat(document.getElementById("rate").value);
+
+  utterance.onboundary = () => highlightCurrent();
+  speechSynthesis.speak(utterance);
+}
+
+function stopSpeech() {
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel();
   }
-};
+  clearHighlights();
+}
 
-readBtn.addEventListener("click", () => {
-  if (!voicesReady) return alert("Voice loading, try again");
-  startReading(0);
-});
+function highlightCurrent() {
+  clearHighlights();
+  const el = document.querySelector(
+    `span[data-idx="${currentWordIndex}"]`
+  );
+  if (el) {
+    el.classList.add("active");
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    currentWordIndex++;
+  }
+}
 
-/* ---------- FILE ---------- */
-fileInput.addEventListener("change", async e => {
+function clearHighlights() {
+  document
+    .querySelectorAll(".word.active")
+    .forEach(w => w.classList.remove("active"));
+}
+
+// ---------- Controls ----------
+document.getElementById("playBtn").onclick = () =>
+  speakFrom(currentWordIndex || 0);
+
+document.getElementById("pauseBtn").onclick = () =>
+  speechSynthesis.pause();
+
+document.getElementById("stopBtn").onclick = () => stopSpeech();
+
+// ---------- File Upload ----------
+document.getElementById("fileInput").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
 
-  stopReading();
-  viewer.innerHTML = "";
-  words = [];
+  stopSpeech();
+  clearText();
 
-  const ext = file.name.split(".").pop().toLowerCase();
-
-  if (ext === "pdf") loadPDF(file);
-  else if (ext === "txt") loadText(file);
-  else if (ext === "docx") loadDocx(file);
-  else if (file.type.startsWith("image")) loadImage(file);
+  if (file.type === "application/pdf") {
+    await loadPDF(file);
+  } else if (file.type.startsWith("image/")) {
+    await ocrImage(file);
+  }
 });
 
-/* ---------- PDF ---------- */
-async function loadPDF(file) {
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+// ---------- Text Rendering ----------
+function renderText(text) {
+  const container = document.getElementById("textContainer");
+  container.innerHTML = "";
+  words = text.split(/\s+/);
+  currentWordIndex = 0;
 
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p);
-    const viewport = page.getViewport({ scale: 1.2 });
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    viewer.appendChild(canvas);
-
-    const content = await page.getTextContent();
-    const pageHeight = viewport.height;
-    let text = "";
-    let lastY = null;
-
-    content.items.forEach(item => {
-      const y = item.transform[5];
-      if (y > pageHeight * 0.9 || y < pageHeight * 0.08) return;
-      if (lastY !== null && Math.abs(y - lastY) > 6) text += "\n";
-      text += item.str;
-      lastY = y;
-    });
-
-    viewer.appendChild(createTextBlock(text));
-  }
-}
-
-/* ---------- OTHER FILES ---------- */
-function loadText(file) {
-  const r = new FileReader();
-  r.onload = () => viewer.appendChild(createTextBlock(r.result));
-  r.readAsText(file);
-}
-
-function loadDocx(file) {
-  const r = new FileReader();
-  r.onload = async () => {
-    const result = await mammoth.extractRawText({ arrayBuffer: r.result });
-    viewer.appendChild(createTextBlock(result.value));
-  };
-  r.readAsArrayBuffer(file);
-}
-
-function loadImage(file) {
-  const img = document.createElement("img");
-  img.src = URL.createObjectURL(file);
-  viewer.appendChild(img);
-}
-
-/* ---------- TEXT ---------- */
-function createTextBlock(text) {
-  const div = document.createElement("div");
-  div.className = "text";
-
-  text = text
-    .replace(/\b(Mr|Mrs|Ms|Dr)\./g, "$1")
-    .replace(/\s+/g, " ");
-
-  text.split(" ").forEach(word => {
+  words.forEach((w, i) => {
     const span = document.createElement("span");
-    span.textContent = word + " ";
+    span.textContent = w + " ";
     span.className = "word";
-    span.onclick = () => startReading(words.indexOf(span));
-    div.appendChild(span);
-    words.push(span);
+    span.dataset.idx = i;
+    span.onclick = () => speakFrom(i);
+    container.appendChild(span);
   });
-
-  return div;
 }
 
-/* ---------- TTS ---------- */
-function expandCaps(text) {
-  return text.replace(/\b[A-Z]{2,}\b/g, w => w.split("").join(" "));
+function clearText() {
+  document.getElementById("textContainer").innerHTML = "";
+  words = [];
+  currentWordIndex = 0;
 }
 
-function getVoice() {
-  return voices.find(v => v.lang === "en-US") || voices[0];
+// ---------- PDF.js ----------
+let pdfDoc = null;
+let pageNum = 1;
+
+async function loadPDF(file) {
+  document.getElementById("pdfContainer").classList.remove("hidden");
+  const data = await file.arrayBuffer();
+  pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+  pageNum = 1;
+  renderPage();
 }
 
-function startReading(start = 0) {
-  stopReading();
+async function renderPage() {
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: 1.5 });
 
-  let text = words.slice(start).map(w => w.textContent).join("");
-  text = expandCaps(text);
+  const canvas = document.getElementById("pdfCanvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
 
-  utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = getVoice();
-  utterance.rate = 0.55;
+  await page.render({ canvasContext: ctx, viewport }).promise;
 
-  let i = start;
+  document.getElementById("pageInfo").textContent =
+    `Page ${pageNum} / ${pdfDoc.numPages}`;
 
-  utterance.onboundary = e => {
-    if (e.name === "word" && words[i]) {
-      words.forEach(w => w.classList.remove("highlight"));
-      words[i].classList.add("highlight");
-      words[i].scrollIntoView({ block: "center" });
-      i++;
-    }
-  };
-
-  speechSynthesis.cancel();
-  setTimeout(() => speechSynthesis.speak(utterance), 100);
+  const content = await page.getTextContent();
+  const text = content.items.map(i => i.str).join(" ");
+  renderText(text);
 }
 
-function pauseReading() { speechSynthesis.pause(); }
-function resumeReading() { speechSynthesis.resume(); }
-function stopReading() {
-  speechSynthesis.cancel();
-  words.forEach(w => w.classList.remove("highlight"));
+document.getElementById("prevPage").onclick = () => {
+  if (pageNum > 1) {
+    pageNum--;
+    renderPage();
+  }
+};
+
+document.getElementById("nextPage").onclick = () => {
+  if (pageNum < pdfDoc.numPages) {
+    pageNum++;
+    renderPage();
+  }
+};
+
+// ---------- OCR (Images) ----------
+async function ocrImage(file) {
+  document.getElementById("pdfContainer").classList.add("hidden");
+  const result = await Tesseract.recognize(file, "eng");
+  renderText(result.data.text);
 }
